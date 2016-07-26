@@ -80,6 +80,9 @@ class ObjectCacheLock(object):
     WAIT_ABANDONED_CODE = 0x00000080
 
     def __init__(self, mutexName, timeoutMs):
+        # FIXME: quick disabling of lock
+        return
+
         mutexName = 'Local\\' + mutexName
         self._mutex = windll.kernel32.CreateMutexW(
             wintypes.INT(0),
@@ -90,17 +93,29 @@ class ObjectCacheLock(object):
         assert self._mutex
 
     def __enter__(self):
+        # FIXME: quick disabling of lock
+        return
+
         if not self._acquired:
             self.acquire()
 
     def __exit__(self, typ, value, traceback):
+        # FIXME: quick disabling of lock
+        return
+
         if self._acquired:
             self.release()
 
     def __del__(self):
+        # FIXME: quick disabling of lock
+        return
+
         windll.kernel32.CloseHandle(self._mutex)
 
     def acquire(self):
+        # FIXME: quick disabling of lock
+        return
+
         result = windll.kernel32.WaitForSingleObject(
             self._mutex, wintypes.INT(self._timeoutMs))
         if result not in [0, self.WAIT_ABANDONED_CODE]:
@@ -111,6 +126,9 @@ class ObjectCacheLock(object):
         self._acquired = True
 
     def release(self):
+        # FIXME: quick disabling of lock
+        return
+
         windll.kernel32.ReleaseMutex(self._mutex)
         self._acquired = False
 
@@ -329,6 +347,9 @@ class PersistentJSONDict(object):
             pass
 
     def save(self):
+        # FIXME: quick disabling of lock
+        return
+
         if self._dirty:
             with open(self._fileName, 'w') as f:
                 json.dump(self._dict, f, sort_keys=True, indent=4)
