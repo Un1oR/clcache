@@ -36,19 +36,25 @@ def generate_props_content(clcache_dir):
         </Project>''').format(clcache_dir=clcache_dir)[1:]
 
 
-def set_system_variable(var, value):
+def check_call_quiet(*args, **kwargs):
     with open(os.devnull, 'w') as devnull:
-        if value:
-            subprocess.check_call(['setx', '-m', var, value], stderr=devnull, stdout=devnull)
+        kwargs['stderr'] = devnull
+        kwargs['stdout'] = devnull
+        subprocess.check_call(*args, **kwargs)
+
+
+def set_system_variable(var, value):
+    if value:
+        check_call_quiet(['setx', '-m', var, value])
+    else:
+        reg_path = r'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+        try:
+            check_call_quiet(['reg', 'query', reg_path, '/V', var])
+        except subprocess.CalledProcessError:
+            # Variable doesn't exists
+            pass
         else:
-            reg_path = r'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
-            try:
-                subprocess.check_call(['reg', 'query', reg_path, '/V', var], stderr=devnull, stdout=devnull)
-            except subprocess.CalledProcessError:
-                # Variable doesn't exists
-                pass
-            else:
-                subprocess.check_call(['reg', 'delete', reg_path, '/F', '/V', var], stderr=devnull, stdout=devnull)
+            check_call_quiet(['reg', 'delete', reg_path, '/F', '/V', var])
     
         
 def install(exe, cache_dir):
