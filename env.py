@@ -85,11 +85,18 @@ def main(args=sys.argv[1:]):
         os.path.dirname(os.path.abspath(__file__)),
         'dist',
         'cl.exe')
-    
+
+    def cl_exe_type(exe):
+        if not os.path.isfile(exe):
+            raise argparse.ArgumentTypeError('{} is not file'.format(exe))
+        if os.path.basename(exe) != 'cl.exe':
+            raise argparse.ArgumentTypeError('clcache executable must be named cl.exe')
+        return exe
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='action')
     parser_install = subparsers.add_parser('install')
-    parser_install.add_argument('--exe', default=clcache_default_exe)
+    parser_install.add_argument('--exe', type=cl_exe_type, default=clcache_default_exe)
     parser_install.add_argument('--cache-dir')
     parser_uninstall = subparsers.add_parser('uninstall')
     args = parser.parse_args(args)
