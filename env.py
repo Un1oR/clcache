@@ -102,7 +102,7 @@ def main(args=sys.argv[1:]):
     args = parser.parse_args(args)
 
     if args.action == 'install':
-        install(args.exe, args.cache_dir)
+        install(os.path.abspath(args.exe), os.path.abspath(args.cache_dir))
     else:
         uninstall()
 
