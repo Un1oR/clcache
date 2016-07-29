@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import argparse
 import glob
 import os
@@ -27,13 +25,16 @@ def clcache_props_path(toolset):
     return os.path.join(toolset, 'ImportAfter', 'Clcache.props')
 
 
-def generate_props_content(clcache_dir):
+def generate_props_content(exe):
     return textwrap.dedent('''
         <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup>
-            <ExecutablePath>{clcache_dir};$(ExecutablePath)</ExecutablePath>
+            <ClToolExe>{exe}</ClToolExe>
+            <ClToolPath>{dir}</ClToolPath>
           </PropertyGroup>
-        </Project>''').format(clcache_dir=clcache_dir)[1:]
+        </Project>''').format(
+            exe=os.path.basename(exe),
+            dir=os.path.dirname(exe))[1:]
 
 
 def check_call_quiet(*args, **kwargs):
@@ -45,9 +46,9 @@ def check_call_quiet(*args, **kwargs):
 
 def set_system_variable(var, value):
     if value:
-        check_call_quiet(['setx', '-m', var, value])
+        check_call_quiet(['setx', var, value])
     else:
-        reg_path = r'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+        reg_path = r'HKEY_CURRENT_USER\Environment'
         try:
             check_call_quiet(['reg', 'query', reg_path, '/V', var])
         except subprocess.CalledProcessError:
@@ -62,11 +63,10 @@ def install(exe, cache_dir):
         clcache_props = clcache_props_path(toolset)
         ensure_dir(os.path.dirname(clcache_props))
         with open(clcache_props, 'w') as f:
-            f.write(generate_props_content(os.path.dirname(exe)))
+            f.write(generate_props_content(exe))
     
     traverse_toolsets(f)
     set_system_variable('CLCACHE_DIR', cache_dir)
-    set_system_variable('CL', '/MP4')
 
 
 def uninstall():
@@ -77,32 +77,26 @@ def uninstall():
 
     traverse_toolsets(f)
     set_system_variable('CLCACHE_DIR', None)
-    set_system_variable('CL', None)
 
 
 def main(args=sys.argv[1:]):
     clcache_default_exe = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         'dist',
-        'cl.exe')
-
-    def cl_exe_type(exe):
-        if not os.path.isfile(exe):
-            raise argparse.ArgumentTypeError('{} is not file'.format(exe))
-        if os.path.basename(exe) != 'cl.exe':
-            raise argparse.ArgumentTypeError('clcache executable must be named cl.exe')
-        return exe
+        'clcache.exe')
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='action')
     parser_install = subparsers.add_parser('install')
-    parser_install.add_argument('--exe', type=cl_exe_type, default=clcache_default_exe)
+    parser_install.add_argument('--exe', type=argparse.FileType('r'), default=clcache_default_exe)
     parser_install.add_argument('--cache-dir')
     parser_uninstall = subparsers.add_parser('uninstall')
     args = parser.parse_args(args)
 
     if args.action == 'install':
-        install(os.path.abspath(args.exe), os.path.abspath(args.cache_dir))
+        exe = os.path.abspath(args.exe.name)
+        cache_dir = os.path.abspath(args.cache_dir) if args.cache_dir else None
+        install(exe, cache_dir)
     else:
         uninstall()
 
