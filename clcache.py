@@ -90,6 +90,14 @@ def normalizeBaseDir(baseDir):
         return None
 
 
+def popen(*args, **kwargs):
+    if 'env' not in 'kwargs':
+        kwargs['env'] = os.environ.copy()
+    if 'VS_UNICODE_OUTPUT' in kwargs['env']:
+        del kwargs['env']['VS_UNICODE_OUTPUT']
+    return Popen(*args, **kwargs)
+
+
 class CacheLockException(Exception):
     pass
 
@@ -326,7 +334,7 @@ class CompilerArtifactsRepository(object):
     def computeCompilerArtifactsKey(compilerBinary, commandLine):
         ppcmd = [compilerBinary, "/EP"]
         ppcmd += [arg for arg in commandLine if arg not in ("-c", "/c")]
-        preprocessor = Popen(ppcmd, stdout=PIPE, stderr=PIPE)
+        preprocessor = popen(ppcmd, stdout=PIPE, stderr=PIPE)
         (preprocessedSourceCode, ppStderrBinary) = preprocessor.communicate()
 
         if preprocessor.returncode != 0:
@@ -1051,7 +1059,7 @@ def invokeRealCompiler(compilerBinary, cmdLine, captureOutput=False):
     stdout = ''
     stderr = ''
     if captureOutput:
-        compilerProcess = Popen(realCmdline, stdout=PIPE, stderr=PIPE)
+        compilerProcess = popen(realCmdline, stdout=PIPE, stderr=PIPE)
         stdoutBinary, stderrBinary = compilerProcess.communicate()
         stdout = stdoutBinary.decode(CL_DEFAULT_CODEC)
         stderr = stderrBinary.decode(CL_DEFAULT_CODEC)
